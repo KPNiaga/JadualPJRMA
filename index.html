@@ -3,1146 +3,866 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Papan Pemuka Prestasi PJRMA</title>
-
-    <!-- External CSS & Libraries -->
+    <title>Jadual Program Jualan Rahmah MADANI ANGKASA</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            200: '#bae0fd',
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                            800: '#1e3a8a',
+                            900: '#172554',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 
-    <!-- Custom Styling -->
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #f8fafc;
-            color: #0f172a;
         }
-        
+        .active-tab {
+            background-color: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+        }
         .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+            width: 4px;
+            height: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
             background: #f1f5f9;
-            border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 4px;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-
-        .shimmer {
-            background: #f6f7f8;
-            background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
-            background-repeat: no-repeat;
-            background-size: 800px 100%; 
-            animation-duration: 1.5s;
-            animation-fill-mode: forwards; 
-            animation-iteration-count: infinite;
-            animation-name: placeholderShimmer;
-            animation-timing-function: linear;
-        }
-
-        @keyframes placeholderShimmer {
-            0% { background-position: -468px 0; }
-            100% { background-position: 468px 0; }
-        }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+        .event-popover {
+            pointer-events: none;
+            transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-blue-500 selection:text-white">
+<body class="text-slate-800 antialiased min-h-screen flex flex-col justify-between">
 
-    <!-- Loading Overlay -->
-    <div id="loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md transition-opacity duration-300">
-        <div class="relative flex items-center justify-center mb-6">
-            <div class="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-600"></div>
-            <i class="fas fa-chart-pie text-blue-600 text-2xl absolute"></i>
-        </div>
-        <h2 class="text-2xl font-bold text-gray-800 animate-pulse">Menjana Papan Pemuka PJRMA...</h2>
-        <p class="text-gray-500 mt-2 text-sm font-medium">Memuat turun data terkini dan memproses rekod yang telah berlalu.</p>
-    </div>
-
-    <!-- Error Overlay -->
-    <div id="error-msg" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center bg-white p-6">
-        <div class="h-20 w-20 rounded-full bg-red-100 flex items-center justify-center text-red-600 mb-4 shadow-sm">
-            <i class="fas fa-exclamation-triangle text-3xl"></i>
-        </div>
-        <h2 class="text-2xl font-bold text-gray-800 mb-2">Ralat Memuat Data</h2>
-        <p id="error-text" class="text-gray-500 max-w-md text-center text-sm leading-relaxed mb-6"></p>
-        <button onclick="location.reload()" class="px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 active:scale-95">
-            <i class="fas fa-sync-alt mr-2"></i> Cuba Semula
-        </button>
-    </div>
-
-    <!-- Corporate Header -->
-    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
-        <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center space-x-4">
-                <div class="bg-gradient-to-tr from-blue-600 to-indigo-500 text-white p-3 rounded-xl shadow-md shadow-blue-500/20">
-                    <i class="fas fa-chart-line text-2xl"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">Dashboard PJRMA 2026</h1>
-                        <span class="bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">Rasmi</span>
-                    </div>
-                    <p class="text-xs sm:text-sm font-semibold text-slate-300 tracking-wide">Laporan Prestasi PJRM ANGKASA 2026</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center space-x-3">
-                <a href="https://kpniaga.github.io/JadualPJRMA/" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 border border-blue-500/50 px-4 py-2.5 rounded-xl flex items-center shadow-md shadow-blue-600/20 transition active:scale-95">
-                    <i class="fas fa-calendar-days mr-2"></i>
-                    <span>Jadual PJRMA</span>
-                    <i class="fas fa-arrow-up-right-from-square ml-2 text-[10px] opacity-70"></i>
-                </a>
-
-                <div class="text-xs font-semibold text-slate-300 bg-slate-800/90 border border-slate-700 px-4 py-2.5 rounded-xl flex items-center shadow-inner">
-                    <i class="far fa-calendar-check mr-2 text-blue-400 text-sm"></i>
-                    <span id="last-updated">Data Dikemaskini Sehingga: 24/8/2026, 12:38:47 PG</span>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content Container -->
-    <main class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow space-y-8">
-        
-        <!-- Scorecards (5 Key Metrics) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-            
-            <!-- 1. Program Dijalankan -->
-            <div class="relative overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between text-white">
-                <i class="fas fa-list-check absolute -right-3 -bottom-3 text-7xl text-white/15 pointer-events-none"></i>
-                <div class="relative z-10 mb-3">
-                    <div id="sc-siri" class="text-3xl font-black text-white shimmer bg-white/20 w-20 h-8 rounded-lg"></div>
-                </div>
-                <div class="relative z-10">
-                    <p class="text-xs font-bold text-blue-100 uppercase tracking-wider">PROGRAM DIJALANKAN</p>
-                </div>
-            </div>
-
-            <!-- 2. Parlimen & DUN -->
-            <div class="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between text-white">
-                <i class="fas fa-building-columns absolute -right-3 -bottom-3 text-7xl text-white/15 pointer-events-none"></i>
-                <div class="relative z-10 space-y-1">
-                    <div class="flex items-baseline space-x-2">
-                        <span id="sc-parlimen" class="text-2xl font-black text-white shimmer bg-white/20 w-10 h-7 rounded-lg"></span>
-                        <span class="text-xs font-bold text-indigo-100 uppercase tracking-wider">PARLIMEN</span>
-                    </div>
-                    <div class="flex items-baseline space-x-2">
-                        <span id="sc-dun" class="text-2xl font-black text-white shimmer bg-white/20 w-10 h-7 rounded-lg"></span>
-                        <span class="text-xs font-bold text-indigo-100 uppercase tracking-wider">DUN</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. Koperasi Terlibat -->
-            <div class="relative overflow-hidden bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between text-white">
-                <i class="fas fa-store absolute -right-3 -bottom-3 text-7xl text-white/15 pointer-events-none"></i>
-                <div class="relative z-10 mb-3">
-                    <div id="sc-kop" class="text-3xl font-black text-white shimmer bg-white/20 w-20 h-8 rounded-lg"></div>
-                </div>
-                <div class="relative z-10">
-                    <p class="text-xs font-bold text-purple-100 uppercase tracking-wider">Koperasi terlibat</p>
-                </div>
-            </div>
-
-            <!-- 4. Jumlah Jualan Keseluruhan -->
-            <div class="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between text-white">
-                <i class="fas fa-wallet absolute -right-3 -bottom-3 text-7xl text-white/15 pointer-events-none"></i>
-                <div class="relative z-10 mb-3">
-                    <div id="sc-jualan" class="text-xl sm:text-2xl font-black text-white shimmer bg-white/20 w-28 h-8 rounded-lg"></div>
-                </div>
-                <div class="relative z-10">
-                    <p class="text-xs font-bold text-emerald-100 uppercase tracking-wider">Jumlah Jualan Keseluruhan</p>
-                </div>
-            </div>
-
-            <!-- 5. Jumlah Subsidi Digunakan -->
-            <div class="relative overflow-hidden bg-gradient-to-br from-teal-600 to-teal-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between text-white">
-                <i class="fas fa-hand-holding-dollar absolute -right-3 -bottom-3 text-7xl text-white/15 pointer-events-none"></i>
-                <div class="relative z-10 mb-3">
-                    <div id="sc-subsidi" class="text-xl sm:text-2xl font-black text-white shimmer bg-white/20 w-28 h-8 rounded-lg"></div>
-                </div>
-                <div class="relative z-10">
-                    <p class="text-xs font-bold text-teal-100 uppercase tracking-wider">Jumlah Subsidi Digunakan</p>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Visualization Area (Map on Top, Bar Chart Below) -->
-        <div class="space-y-6">
-            
-            <!-- 1. Map Chart: Parliamentary & DUN Distribution (Placed at Top) -->
-            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-h-[550px] relative">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                        <h3 class="text-lg font-bold text-slate-900 tracking-tight">Bilangan Parlimen dan DUN yang Telah Melaksanakan PJRMA</h3>
-                        <p class="text-xs text-slate-500 font-medium mt-0.5">Taburan pelaksanaan program mengikut negeri di Malaysia</p>
-                    </div>
-                    <div class="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg self-start sm:self-auto">
-                        <i class="fas fa-mouse-pointer mr-1"></i> Klik negeri untuk butiran lanjut
-                    </div>
-                </div>
-
-                <div class="w-full flex-grow my-4 relative min-h-[450px]">
-                    <div id="mapChart" class="absolute inset-0 w-full h-full"></div>
-                </div>
-            </div>
-
-            <!-- 2. Charts Grid: Monthly Trend & Parliament Execution (Side-by-Side) -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Monthly/Weekly Trend Chart -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-h-[500px]">
-                    <div>
-                        <h3 id="trendChartTitle" class="text-lg font-bold text-slate-900 tracking-tight">Trend Program Mengikut Bulan</h3>
-                        <p id="trendChartSub" class="text-xs text-slate-500 font-medium mt-0.5">Bilangan siri PJRMA yang dilaksanakan mengikut urutan bulan</p>
+    <div>
+        <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
+            <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-14">
+                    <!-- Brand -->
+                    <div class="flex items-center space-x-2 sm:space-x-3">
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20 shrink-0">
+                            <i class="fa-solid fa-calendar-days text-base sm:text-lg"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xs sm:text-base font-extrabold text-slate-900 leading-tight">Jadual Program Jualan Rahmah MADANI ANGKASA</h1>
+                            <p class="text-[10px] sm:text-xs text-slate-500 font-medium hidden sm:block">
+                                Pemacu Unggul Kelestarian Sosioekonomi Gerakan Koperasi
+                                <span class="mx-1 text-slate-300">•</span>
+                                <span class="text-brand-700 font-semibold">Dikemaskini pada: <span id="lastUpdatedDate">-</span></span>
+                            </p>
+                            <p class="text-[9px] text-brand-700 font-semibold sm:hidden">
+                                Dikemaskini pada: <span id="lastUpdatedDateMobile">-</span>
+                            </p>
+                        </div>
                     </div>
 
-                    <div class="w-full flex-grow my-4 relative min-h-[360px]">
-                        <div id="trendChart" class="absolute inset-0 w-full h-full"></div>
-                    </div>
-
-                    <!-- Switch Buttons (Metric & Timeframe) Moved to Bottom -->
-                    <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2 pt-3 border-t border-slate-100">
-                        <!-- Metric Toggle (Bilangan Program / Jumlah Jualan) -->
-                        <div class="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
-                            <button id="btnTrendProgram" onclick="setTrendMetric('program')" class="px-2.5 py-1.5 rounded-lg transition bg-white text-blue-600 shadow-sm font-bold">
-                                <i class="fas fa-list-check mr-1"></i> Program
+                    <!-- Actions & View Switches -->
+                    <div class="flex items-center space-x-2 sm:space-x-3">
+                        <!-- View Switcher -->
+                        <div class="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-slate-200">
+                            <button onclick="switchView('calendar')" id="viewCalendarBtn" class="px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-calendar-days"></i>
+                                <span>Kalendar</span>
                             </button>
-                            <button id="btnTrendJualan" onclick="setTrendMetric('jualan')" class="px-2.5 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800 font-medium">
-                                <i class="fas fa-wallet mr-1"></i> Jualan (RM)
+                            <button onclick="switchView('list')" id="viewListBtn" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all active-tab flex items-center gap-1.5">
+                                <i class="fa-solid fa-list-ul"></i>
+                                <span>Senarai</span>
                             </button>
                         </div>
 
-                        <!-- Period Toggle (Bulan / Minggu) -->
-                        <div class="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
-                            <button id="btnTrendBulan" onclick="setTrendView('bulan')" class="px-2.5 py-1.5 rounded-lg transition bg-white text-blue-600 shadow-sm font-bold">
-                                <i class="far fa-calendar-alt mr-1"></i> Bulan
-                            </button>
-                            <button id="btnTrendMinggu" onclick="setTrendView('minggu')" class="px-2.5 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800 font-medium">
-                                <i class="far fa-calendar-minus mr-1"></i> Minggu
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 100% Stacked Bar Chart: Parliament Execution -->
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between min-h-[480px]">
-                    <div>
-                        <h3 class="text-lg font-bold text-slate-900 tracking-tight">Pelaksanaan PJRMA Mengikut Parlimen</h3>
-                        <p class="text-xs text-slate-500 font-medium mt-0.5">Peratusan Parlimen yang telah melaksanakan PJRMA berbanding jumlah keseluruhan Parlimen</p>
-                    </div>
-                    <div class="w-full flex-grow my-4 relative min-h-[380px]">
-                        <div id="parlimenChart" class="absolute inset-0 w-full h-full"></div>
+                        <!-- Refresh Button (Kemaskini) -->
+                        <button id="refreshBtn" onclick="fetchScheduleData()" class="p-1.5 sm:px-3 sm:py-1 text-xs font-semibold rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all flex items-center gap-1.5" title="Kemas Kini Data">
+                            <i id="refreshIcon" class="fa-solid fa-arrows-rotate text-slate-500"></i>
+                            <span class="hidden sm:inline">Kemas Kini</span>
+                        </button>
                     </div>
                 </div>
             </div>
+        </header>
 
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-2 sm:mt-3">
+            <div class="bg-white rounded-xl p-2.5 sm:p-3 shadow-sm border border-slate-200/80 flex items-center justify-between gap-4">
+                
+                <!-- Single Filter: Negeri -->
+                <div class="flex items-center space-x-2 w-full sm:w-auto min-w-[220px]">
+                    <i class="fa-solid fa-location-dot text-brand-600 text-xs pl-1"></i>
+                    <label for="negeriFilter" class="text-xs font-bold text-slate-600 whitespace-nowrap">Penapis Negeri:</label>
+                    <select id="negeriFilter" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer">
+                        <option value="all">Semua Negeri</option>
+                    </select>
+                </div>
+
+            </div>
         </div>
 
-    </main>
+        <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
 
-    <!-- Modal Pop-up State Details -->
-    <div id="stateModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
-        <div class="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden transform scale-95 transition-all duration-300 border border-slate-100" id="stateModalContent">
-            
-            <!-- Flag Background with Light Overlay -->
-            <div id="modalFlagBg" class="absolute inset-0 opacity-[0.08] bg-cover bg-center pointer-events-none bg-no-repeat transition-all duration-500"></div>
-            
-            <div class="relative p-6 sm:p-8">
-                <!-- Close Button -->
-                <button onclick="closeModal()" class="absolute top-6 right-6 text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-full h-10 w-10 flex items-center justify-center transition">
-                    <i class="fas fa-xmark text-xl"></i>
+            <!-- Loading State -->
+            <div id="loadingState" class="bg-white rounded-xl p-8 border border-slate-200/80 shadow-sm text-center my-4">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-brand-600 border-t-transparent mb-3"></div>
+                <p class="text-xs font-bold text-slate-700">Sedang memuat turun data jadual...</p>
+                <p class="text-[11px] text-slate-400 mt-1">Mengambil maklumat terus dari Google Sheets</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="hidden bg-rose-50 rounded-xl p-6 border border-rose-200 text-center my-4">
+                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-2xl mb-2"></i>
+                <h3 class="text-xs font-bold text-rose-800">Gagal Memuatkan Data</h3>
+                <p class="text-[11px] text-rose-600 mt-1" id="errorMessage">Sila pastikan sambungan internet anda stabil atau URL Google Sheet diterbitkan sebagai CSV.</p>
+                <button onclick="fetchScheduleData()" class="mt-3 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm">
+                    Cuba Lagi
                 </button>
+            </div>
+
+            <!-- VIEW 1: KALENDAR -->
+            <div id="calendarView" class="hidden space-y-2">
                 
-                <!-- Modal Header -->
-                <div class="flex items-center space-x-4 mb-6 border-b border-slate-100 pb-5">
-                    <div class="h-14 w-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 text-2xl">
-                        <i class="fas fa-map-location-dot"></i>
+                <!-- Calendar Month Controls -->
+                <div class="bg-white rounded-xl p-2.5 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div class="flex items-center space-x-1.5">
+                        <button onclick="changeMonth(-1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-all" title="Bulan Sebelumnya">
+                            <i class="fa-solid fa-chevron-left text-xs"></i>
+                        </button>
+                        <button onclick="changeMonth(1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-all" title="Bulan Seterusnya">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                        <button onclick="goToCurrentMonth()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all">
+                            Hari Ini
+                        </button>
                     </div>
-                    <div>
-                        <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Laporan Butiran Negeri</span>
-                        <h3 id="modalStateTitle" class="text-2xl sm:text-3xl font-black text-slate-900">Pahang</h3>
+
+                    <h2 id="calendarMonthTitle" class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
+                        <!-- Month Year rendered via JS -->
+                    </h2>
+
+                    <div class="text-[11px] text-slate-500 font-medium hidden sm:block">
+                        <span class="inline-block w-2 h-2 rounded-full bg-brand-600 mr-1.5"></span>Ada Program
                     </div>
                 </div>
-                
-                <!-- Parlimen & DUN Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+
+                <!-- Calendar Grid Container -->
+                <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
                     
-                    <!-- Parlimen List Card -->
-                    <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
-                                <i class="fas fa-landmark text-indigo-500 mr-2"></i> Parlimen Terlibat
-                            </h4>
-                            <span id="modalParlimenBadge" class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-0.5 rounded-full">0</span>
-                        </div>
-                        <div id="modalParlimenList" class="text-slate-700 text-sm h-40 overflow-y-auto pr-2 custom-scrollbar font-medium space-y-1"></div>
-                    </div>
-                    
-                    <!-- DUN List Card -->
-                    <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
-                                <i class="fas fa-building text-blue-500 mr-2"></i> DUN Terlibat
-                            </h4>
-                            <span id="modalDunBadge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full">0</span>
-                        </div>
-                        <div id="modalDunList" class="text-slate-700 text-sm h-40 overflow-y-auto pr-2 custom-scrollbar font-medium space-y-1"></div>
+                    <!-- Days Header -->
+                    <div class="grid grid-cols-7 bg-slate-50 border-b border-slate-200 text-center font-bold text-[11px] text-slate-600 uppercase tracking-wider py-1.5">
+                        <div class="text-brand-700">Isnin</div>
+                        <div>Selasa</div>
+                        <div>Rabu</div>
+                        <div>Khamis</div>
+                        <div>Jumaat</div>
+                        <div class="text-amber-600">Sabtu</div>
+                        <div class="text-red-500">Ahad</div>
                     </div>
 
-                </div>
-
-                <!-- Financial Stats Card Footer -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-100 flex items-center space-x-4">
-                        <div class="p-3 bg-white rounded-xl text-emerald-600 shadow-sm"><i class="fas fa-wallet text-xl"></i></div>
-                        <div>
-                            <div class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Jumlah Jualan</div>
-                            <div id="modalJualan" class="text-lg sm:text-xl font-black text-slate-900">RM 0.00</div>
-                        </div>
-                    </div>
-
-                    <div class="bg-teal-50/80 rounded-2xl p-4 border border-teal-100 flex items-center space-x-4">
-                        <div class="p-3 bg-white rounded-xl text-teal-600 shadow-sm"><i class="fas fa-hand-holding-dollar text-xl"></i></div>
-                        <div>
-                            <div class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">Jumlah Subsidi (anggaran)</div>
-                            <div id="modalSubsidi" class="text-lg sm:text-xl font-black text-slate-900">RM 0.00</div>
-                        </div>
+                    <!-- Days Cells Grid -->
+                    <div id="calendarGrid" class="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100 bg-slate-50/30">
+                        <!-- Days populated dynamically by JS -->
                     </div>
                 </div>
+            </div>
 
+            <!-- VIEW 2: SENARAI -->
+            <div id="listView" class="hidden space-y-2">
+                <div id="listContainer" class="space-y-2.5">
+                    <!-- Event cards rendered via JS -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Floating Tooltip Pop-up -->
+    <div id="eventTooltip" class="fixed hidden z-50 bg-slate-900 text-white p-3 rounded-xl shadow-2xl max-w-xs text-xs space-y-1.5 pointer-events-none transition-opacity duration-150 border border-slate-700/80 backdrop-blur-md">
+        <!-- Dynamic content injected via JavaScript -->
+    </div>
+
+    <!-- Event Detail Modal -->
+    <div id="eventModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div class="flex items-start justify-between border-b border-slate-100 pb-3">
+                <div class="space-y-1">
+                    <span id="modalNegeri" class="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-100 text-brand-800 uppercase tracking-wider"></span>
+                    <h3 id="modalKoperasi" class="text-sm font-extrabold text-slate-900 pt-1 leading-snug"></h3>
+                </div>
+                <button onclick="closeModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+
+            <div class="space-y-2.5 text-xs text-slate-600">
+                <div class="flex items-start gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <i class="fa-regular fa-calendar text-brand-600 text-sm mt-0.5"></i>
+                    <div class="w-full">
+                        <div class="font-bold text-slate-800">Tarikh Program</div>
+                        <div id="modalTarikh" class="text-slate-600 mb-2"></div>
+                        <div class="pt-2 border-t border-slate-200/60 space-y-1.5">
+                            <div class="font-bold text-slate-700 text-[11px] flex items-center gap-1.5">
+                                <i class="fa-solid fa-calendar-plus text-indigo-600"></i>
+                                <span>Simpan ke Kalendar</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <a id="modalGoogleCalBtn" href="#" target="_blank" rel="noopener noreferrer" class="py-1.5 px-2 bg-white hover:bg-indigo-50 text-indigo-700 font-semibold rounded-lg border border-slate-200 text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-2xs">
+                                    <i class="fa-brands fa-google text-indigo-600"></i>
+                                    <span>Google Calendar</span>
+                                </a>
+                                <button id="modalIcsBtn" onclick="downloadIcsFileCurrent()" class="py-1.5 px-2 bg-white hover:bg-indigo-50 text-slate-700 font-semibold rounded-lg border border-slate-200 text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-2xs">
+                                    <i class="fa-solid fa-file-arrow-down text-slate-600"></i>
+                                    <span>iCal / Outlook (.ics)</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <i class="fa-solid fa-location-dot text-rose-500 text-sm mt-0.5"></i>
+                    <div class="w-full">
+                        <div class="font-bold text-slate-800">Lokasi / Alamat</div>
+                        <div id="modalLokasi" class="text-slate-600 leading-relaxed mb-2"></div>
+                        <a id="modalMapsBtn" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg border border-rose-200 text-[11px] transition-all">
+                            <i class="fa-solid fa-map-location-dot text-rose-500"></i>
+                            <span>Buka di Google Maps</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="modalPautanContainer" class="hidden pt-1">
+                    <a id="modalPautan" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm">
+                        <span>Buka Pautan Maklumat</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 flex justify-end">
+                <button onclick="closeModal()" class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all">
+                    Tutup
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Corporate Footer -->
-    <footer class="bg-slate-900 border-t border-slate-800 py-5 text-center text-xs text-slate-400 font-medium space-y-1">
-        <p>PJRMA Analytics Dashboard &copy; 2026 KPNiaga. Hak Cipta Terpelihara.</p>
-        <p class="text-[11px] text-slate-500">Disediakan oleh: Seksyen Perdagangan & Peruncitan, KPNiaga</p>
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-white border-t border-slate-800 mt-6 py-4 text-center">
+        <div class="max-w-7xl mx-auto px-4 space-y-1">
+            <p class="text-xs sm:text-sm font-bold text-white tracking-wide">© 2026 KPNiaga. Hak Cipta Terpelihara.</p>
+            <p class="text-[11px] sm:text-xs text-slate-300 font-medium">Disediakan oleh Seksyen Perdagangan & Peruncitan, KPNiaga</p>
+        </div>
     </footer>
 
     <script>
-        // Data Sources
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQIFk01yKBZ5xWdbnPzhfAtaCB8jhT6Pe_8qeEcBFM1X90i4SijagBbsAijHmUt_F54oUcjxlxGZxLU/pub?output=csv';
-        const GEOJSON_URL = 'https://code.highcharts.com/mapdata/countries/my/my-all.geo.json';
+        const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuYlZ7L2PCKGVfg_bNkh1op3jUsGOCtUSHGF_cdjGYsPJtRLbnWEL4wjLQt-pnRKX8W5yEZq73lTBY/pub?gid=2137907131&single=true&output=csv';
 
-        // Jumlah Parlimen Sebenar Mengikut Negeri/Wilayah
-        const PARLIMEN_TOTAL_BY_STATE = {
-            'Sarawak': 31,
-            'Johor': 26,
-            'Sabah': 26,
-            'Perak': 24,
-            'Selangor': 22,
-            'Kedah': 14,
-            'Kelantan': 14,
-            'Pahang': 14,
-            'Pulau Pinang': 13,
-            'Wilayah Persekutuan': 12,
-            'Terengganu': 8,
-            'Negeri Sembilan': 8,
-            'Melaka': 6,
-            'Perlis': 3
-        };
+        // Official list of valid Malaysian States as requested
+        const VALID_NEGERI_LIST = [
+            'PERLIS',
+            'KEDAH',
+            'PULAU PINANG',
+            'PERAK',
+            'SELANGOR',
+            'WILAYAH',
+            'KELANTAN',
+            'TERENGGANU',
+            'PAHANG',
+            'MELAKA',
+            'N. SEMBILAN',
+            'JOHOR',
+            'SABAH',
+            'SARAWAK'
+        ];
 
-        // State Flag SVG URLs (Wikipedia / Wikimedia Official Flags)
-        const FLAG_URLS = {
-            "Johor": "https://upload.wikimedia.org/wikipedia/commons/5/5a/Flag_of_Johor.svg",
-            "Kedah": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Flag_of_Kedah.svg",
-            "Kelantan": "https://upload.wikimedia.org/wikipedia/commons/6/61/Flag_of_Kelantan.svg",
-            "Wilayah Persekutuan": "https://upload.wikimedia.org/wikipedia/commons/8/86/Flag_of_the_Federal_Territories_of_Malaysia.svg",
-            "W.P. Kuala Lumpur": "https://upload.wikimedia.org/wikipedia/commons/6/64/Flag_of_Kuala_Lumpur%2C_Malaysia.svg",
-            "W.P. Labuan": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Flag_of_Labuan.svg",
-            "Melaka": "https://upload.wikimedia.org/wikipedia/commons/0/09/Flag_of_Malacca.svg",
-            "Negeri Sembilan": "https://upload.wikimedia.org/wikipedia/commons/d/db/Flag_of_Negeri_Sembilan.svg",
-            "Pahang": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Flag_of_Pahang.svg",
-            "Perak": "https://upload.wikimedia.org/wikipedia/commons/8/87/Flag_of_Perak.svg",
-            "Perlis": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Flag_of_Perlis.svg",
-            "Pulau Pinang": "https://upload.wikimedia.org/wikipedia/commons/d/d4/Flag_of_Penang_%28Malaysia%29.svg",
-            "W.P. Putrajaya": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Flag_of_Putrajaya.svg",
-            "Sabah": "https://upload.wikimedia.org/wikipedia/commons/b/b5/Flag_of_Sabah.svg",
-            "Sarawak": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Flag_of_Sarawak.svg",
-            "Selangor": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Flag_of_Selangor.svg",
-            "Terengganu": "https://upload.wikimedia.org/wikipedia/commons/6/60/Flag_of_Terengganu.svg"
-        };
+        let eventsData = [];
+        let filteredEvents = [];
+        let currentDate = new Date();
+        let selectedNegeri = 'all';
+        let currentView = 'list';
+        let currentModalEvent = null;
 
-        // Data Aggregators
-        let totalSiri = 0;
-        let koperasiSet = new Set();
-        let parlimenSetGlobal = new Set();
-        let dunSetGlobal = new Set();
-        let totalJualan = 0;
-        let totalSubsidi = 0;
-
-        let monthlyTrend = {}; // Format: { "YYYY-MM": { count: 0, jualan: 0 } }
-        let weeklyTrend = {};  // Format: { "YYYY-MM-DD": { count: 0, jualan: 0 } }
-        let currentTrendView = 'bulan'; // 'bulan' or 'minggu'
-        let currentTrendMetric = 'program'; // 'program' or 'jualan'
-        let stateStats = {};   // Format: { "State": { siri: 0, parlimen: Set(), dun: Set(), jualan: 0, subsidi: 0 } }
-
-        let trendChartInstance = null;
-        let mapChartInstance = null;
-        let parlimenChartInstance = null;
-
-        const formatCurrency = (val) => {
-            return 'RM ' + Number(val || 0).toLocaleString('ms-MY', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-        };
-
-        const normalizeStateName = (str) => {
-            if (!str) return 'Unknown';
-            let s = str.toString().trim().toLowerCase();
-            if (s.includes('johor')) return 'Johor';
-            if (s.includes('kedah')) return 'Kedah';
-            if (s.includes('kelantan')) return 'Kelantan';
-            if (s.includes('melaka') || s.includes('malacca')) return 'Melaka';
-            if (s.includes('sembilan')) return 'Negeri Sembilan';
-            if (s.includes('pahang')) return 'Pahang';
-            if (s.includes('perak')) return 'Perak';
-            if (s.includes('perlis')) return 'Perlis';
-            if (s.includes('pinang') || s.includes('penang')) return 'Pulau Pinang';
-            if (s.includes('sabah')) return 'Sabah';
-            if (s.includes('sarawak')) return 'Sarawak';
-            if (s.includes('selangor')) return 'Selangor';
-            if (s.includes('terengganu')) return 'Terengganu';
-            if (s.includes('kuala lumpur') || s.includes('kl') || s.includes('putrajaya') || s.includes('labuan') || s.includes('wilayah')) return 'Wilayah Persekutuan';
-            return str.trim();
-        };
-
-        const parseCustomDate = (val) => {
-            if (!val) return null;
-            let str = val.toString().trim();
+        window.onload = function() {
+            switchView('list');
+            fetchScheduleData();
             
-            // 1. Strict Regex match for numeric dates: DD/MM/YYYY, DD-MM-YYYY or D/M/YY
-            let numericMatch = str.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
-            if (numericMatch) {
-                let day = parseInt(numericMatch[1], 10);
-                let month = parseInt(numericMatch[2], 10) - 1; // 0-indexed in JavaScript
-                let year = parseInt(numericMatch[3], 10);
-                if (year < 100) year += 2000;
-                
-                if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
-                    let d = new Date(year, month, day);
-                    if (!isNaN(d.getTime())) return d;
-                }
-            }
-
-            // 2. Fallback for textual Malay/English dates (e.g. "15 Mei 2024")
-            const malayMonths = {
-                'jan': 0, 'januari': 0, 'feb': 1, 'februari': 1, 'mac': 2, 'march': 2,
-                'apr': 3, 'april': 3, 'mei': 4, 'may': 4, 'jun': 5, 'june': 5,
-                'jul': 6, 'julai': 6, 'july': 6, 'ogo': 7, 'ogos': 7, 'aug': 7, 'august': 7,
-                'sep': 8, 'september': 8, 'okt': 9, 'oktober': 9, 'oct': 9, 'october': 9,
-                'nov': 10, 'november': 10, 'dis': 11, 'disember': 11, 'dec': 11, 'december': 11
-            };
-
-            let textMatch = str.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{2,4})/);
-            if (textMatch) {
-                let day = parseInt(textMatch[1], 10);
-                let monthStr = textMatch[2].toLowerCase();
-                let year = parseInt(textMatch[3], 10);
-                if (year < 100) year += 2000;
-
-                if (malayMonths.hasOwnProperty(monthStr)) {
-                    let month = malayMonths[monthStr];
-                    let d = new Date(year, month, day);
-                    if (!isNaN(d.getTime())) return d;
-                }
-            }
-
-            return null;
+            // Event listener for Negeri filter dropdown
+            document.getElementById('negeriFilter').addEventListener('change', (e) => {
+                selectedNegeri = e.target.value;
+                applyFilters();
+            });
         };
 
-        const getMonday = (d) => {
-            let date = new Date(d);
-            let day = date.getDay();
-            let diff = date.getDate() - day + (day === 0 ? -6 : 1);
-            let monday = new Date(date.setDate(diff));
-            monday.setHours(0, 0, 0, 0);
-            return monday;
-        };
+        function fetchScheduleData() {
+            showLoading(true);
+            showError(false);
 
-        function parseAndProcessCSV() {
-            Papa.parse(CSV_URL, {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+            Papa.parse(GOOGLE_SHEET_CSV_URL, {
                 download: true,
+                header: true,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    try {
-                        let rows = results.data;
-                        if (!rows || rows.length < 2) {
-                            throw new Error("Data CSV tidak mengandungi sebarang maklumat.");
-                        }
+                    if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+                    showLoading(false);
 
-                        let headers = rows[0].map(h => (h || '').toString().toLowerCase().trim());
-                        
-                        // Dynamic column discovery
-                        let colKoperasi = 0; // Col A for COUNTUNIQUE Koperasi
-                        let colTarikh = -1, colParlimen = -1, colDun = -1, colJualan = -1, colSubsidi = -1, colNegeri = -1;
-
-                        headers.forEach((h, idx) => {
-                            if (h.includes('tarikh') || h.includes('date') || h.includes('masa')) colTarikh = idx;
-                            else if (h.includes('parlimen')) colParlimen = idx;
-                            else if (h.includes('dun') || h.includes('dewan')) colDun = idx;
-                            else if (h.includes('jualan') || h.includes('sales')) colJualan = idx;
-                            else if (h.includes('subsidi')) colSubsidi = idx;
-                            else if (h.includes('negeri') || h.includes('state')) colNegeri = idx;
-                        });
-
-                        // Fallback index defaults if headers are not explicitly named
-                        if (colTarikh === -1) colTarikh = 4;
-                        if (colParlimen === -1) colParlimen = 2;
-                        if (colDun === -1) colDun = 3;
-                        if (colJualan === -1) colJualan = 6;
-                        if (colSubsidi === -1) colSubsidi = 7;
-                        if (colNegeri === -1) colNegeri = 8;
-
-                        // Midnight reference for "Tarikh yang telah berlalu" (up to yesterday)
-                        let today = new Date();
-                        today.setHours(0, 0, 0, 0);
-
-                        for (let i = 1; i < rows.length; i++) {
-                            let row = rows[i];
-                            if (!row || row.length === 0) continue;
-
-                            let dateVal = row[colTarikh];
-                            let recordDate = parseCustomDate(dateVal);
-
-                            // STRICT RULE: Only count past dates (recordDate < today)
-                            if (!recordDate || recordDate >= today) continue;
-
-                            // 1. Siri (1 Row = 1 Siri)
-                            totalSiri++;
-
-                            // 3. Koperasi (Column A COUNTUNIQUE)
-                            let kopVal = row[colKoperasi] ? row[colKoperasi].toString().trim() : '';
-                            if (kopVal && kopVal !== '-' && kopVal.toLowerCase() !== 'tiada') {
-                                koperasiSet.add(kopVal);
-                            }
-
-                            // 2. Parlimen & DUN
-                            let parlimen = colParlimen > -1 && row[colParlimen] ? row[colParlimen].toString().trim() : '';
-                            let dun = colDun > -1 && row[colDun] ? row[colDun].toString().trim() : '';
-
-                            if (parlimen && parlimen !== '-' && parlimen.toLowerCase() !== 'tiada data') {
-                                parlimenSetGlobal.add(parlimen);
-                            }
-                            if (dun && dun !== '-' && dun.toLowerCase() !== 'tiada data') {
-                                dunSetGlobal.add(dun);
-                            }
-
-                            // 4 & 5. Financials
-                            let jualanNum = colJualan > -1 && row[colJualan] ? parseFloat(row[colJualan].toString().replace(/[^0-9.-]+/g, "")) || 0 : 0;
-                            let subsidiNum = colSubsidi > -1 && row[colSubsidi] ? parseFloat(row[colSubsidi].toString().replace(/[^0-9.-]+/g, "")) || 0 : 0;
-
-                            totalJualan += jualanNum;
-                            totalSubsidi += subsidiNum;
-
-                            // Monthly Trend Key (YYYY-MM)
-                            let year = recordDate.getFullYear();
-                            let month = String(recordDate.getMonth() + 1).padStart(2, '0');
-                            let monthKey = `${year}-${month}`;
-                            if (!monthlyTrend[monthKey]) {
-                                monthlyTrend[monthKey] = { count: 0, jualan: 0 };
-                            }
-                            monthlyTrend[monthKey].count++;
-                            monthlyTrend[monthKey].jualan += jualanNum;
-
-                            // Weekly Trend Key (YYYY-MM-DD for Monday of that week)
-                            let mondayDate = getMonday(recordDate);
-                            let mondayYear = mondayDate.getFullYear();
-                            let mondayMonth = String(mondayDate.getMonth() + 1).padStart(2, '0');
-                            let mondayDay = String(mondayDate.getDate()).padStart(2, '0');
-                            let weekKey = `${mondayYear}-${mondayMonth}-${mondayDay}`;
-                            if (!weeklyTrend[weekKey]) {
-                                weeklyTrend[weekKey] = { count: 0, jualan: 0 };
-                            }
-                            weeklyTrend[weekKey].count++;
-                            weeklyTrend[weekKey].jualan += jualanNum;
-
-                            // State Data Aggregation
-                            let rawState = colNegeri > -1 && row[colNegeri] ? row[colNegeri].toString().trim() : 'Unknown';
-                            let stateName = normalizeStateName(rawState);
-
-                            if (stateName !== 'Unknown') {
-                                if (!stateStats[stateName]) {
-                                    stateStats[stateName] = {
-                                        siri: 0,
-                                        parlimen: new Set(),
-                                        dun: new Set(),
-                                        jualan: 0,
-                                        subsidi: 0
-                                    };
-                                }
-                                stateStats[stateName].siri++;
-                                if (parlimen && parlimen !== '-') stateStats[stateName].parlimen.add(parlimen);
-                                if (dun && dun !== '-') stateStats[stateName].dun.add(dun);
-                                stateStats[stateName].jualan += jualanNum;
-                                stateStats[stateName].subsidi += subsidiNum;
-                            }
-                        }
-
-                        updateScorecardUI();
-                        renderTrendChart();
-                        renderParlimenChart();
-                        loadMapAndRender();
-
-                    } catch (err) {
-                        showError("Ralat Memproses Data: " + err.message);
+                    if (results.data && results.data.length > 0) {
+                        processCSVData(results.data);
+                    } else {
+                        showError(true, 'Tiada rekod dijumpai dalam Google Sheet.');
                     }
                 },
                 error: function(err) {
-                    showError("Gagal Memuat Turun Data CSV daripada Google Sheets. Sila pastikan pautan sheet dibuka secara awam.");
+                    if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+                    showLoading(false);
+                    showError(true, 'Gagal memuat turun CSV dari Google Sheet: ' + err.message);
                 }
             });
         }
 
-        function updateScorecardUI() {
-            // Remove skeleton shimmers
-            ['sc-siri', 'sc-parlimen', 'sc-dun', 'sc-kop', 'sc-jualan', 'sc-subsidi'].forEach(id => {
-                let el = document.getElementById(id);
-                if (el) el.classList.remove('shimmer', 'bg-white/20', 'w-10', 'w-20', 'w-28', 'h-7', 'h-8', 'rounded-lg');
-            });
+        function normalizeNegeri(val) {
+            if (!val) return '';
+            const clean = String(val).trim().toUpperCase();
+            
+            // Check direct match
+            if (VALID_NEGERI_LIST.includes(clean)) return clean;
 
-            document.getElementById('sc-siri').innerText = totalSiri.toLocaleString('ms-MY');
-            document.getElementById('sc-parlimen').innerText = parlimenSetGlobal.size.toLocaleString('ms-MY');
-            document.getElementById('sc-dun').innerText = dunSetGlobal.size.toLocaleString('ms-MY');
-            document.getElementById('sc-kop').innerText = koperasiSet.size.toLocaleString('ms-MY');
-            document.getElementById('sc-jualan').innerText = formatCurrency(totalJualan);
-            document.getElementById('sc-subsidi').innerText = formatCurrency(totalSubsidi);
+            // Handle standard variants
+            if (clean.includes('WILAYAH')) return 'WILAYAH';
+            if (clean.includes('NEGERI SEMBILAN') || clean.includes('N.SEMBILAN') || clean.includes('N. SEMBILAN')) return 'N. SEMBILAN';
+            if (clean.includes('PULAU PINANG') || clean.includes('PENANG')) return 'PULAU PINANG';
 
-            document.getElementById('last-updated').innerText = `Data Dikemaskini Sehingga: 24/8/2026, 12:38:47 PG`;
-
-            // Hide loading overlay
-            document.getElementById('loading').classList.add('opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                document.getElementById('loading').classList.add('hidden');
-            }, 300);
+            return ''; // Leave empty if not in valid list
         }
 
-        function renderTrendChart() {
-            let container = document.getElementById('trendChart');
-            if (trendChartInstance) {
-                trendChartInstance.dispose();
-            }
-            trendChartInstance = echarts.init(container);
+        function processCSVData(rows) {
+            eventsData = [];
+            const negeriSet = new Set();
 
-            const monthNamesMalay = ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"];
-            let xAxisLabels = [];
-            let seriesValues = [];
-
-            if (currentTrendView === 'bulan') {
-                let sortedKeys = Object.keys(monthlyTrend).sort();
-                sortedKeys.forEach(key => {
-                    let [y, m] = key.split('-');
-                    let mIdx = parseInt(m, 10) - 1;
-                    xAxisLabels.push(`${monthNamesMalay[mIdx]} ${y}`);
-                    let val = currentTrendMetric === 'program' ? monthlyTrend[key].count : monthlyTrend[key].jualan;
-                    seriesValues.push(val);
-                });
-            } else {
-                let sortedKeys = Object.keys(weeklyTrend).sort();
-                sortedKeys.forEach(key => {
-                    let [y, m, d] = key.split('-');
-                    let mIdx = parseInt(m, 10) - 1;
-                    xAxisLabels.push(`${parseInt(d, 10)} ${monthNamesMalay[mIdx]}`);
-                    let val = currentTrendMetric === 'program' ? weeklyTrend[key].count : weeklyTrend[key].jualan;
-                    seriesValues.push(val);
-                });
-            }
-
-            let isJualan = currentTrendMetric === 'jualan';
-            let barColorGradient = isJualan 
-                ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#10b981' },
-                    { offset: 1, color: '#059669' }
-                  ])
-                : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#6366f1' },
-                    { offset: 1, color: '#3b82f6' }
-                  ]);
-
-            let barHoverGradient = isJualan
-                ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#34d399' },
-                    { offset: 1, color: '#10b981' }
-                  ])
-                : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#818cf8' },
-                    { offset: 1, color: '#60a5fa' }
-                  ]);
-
-            let option = {
-                tooltip: {
-                    trigger: 'axis',
-                    axisPointer: { type: 'shadow' },
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    textStyle: { color: '#fff', fontFamily: 'Inter' },
-                    borderWidth: 0,
-                    borderRadius: 8,
-                    formatter: function(params) {
-                        let labelPrefix = currentTrendView === 'bulan' ? 'Bulan' : 'Minggu Bermula';
-                        let metricLabel = isJualan ? 'Jumlah Jualan' : 'Siri Dijalankan';
-                        let valDisplay = isJualan ? formatCurrency(params[0].value) : params[0].value;
-                        let valColorClass = isJualan ? 'text-emerald-300' : 'text-blue-300';
-
-                        return `<div class="font-bold text-sm mb-1">${labelPrefix}: ${params[0].name}</div>
-                                <div>${metricLabel}: <span class="font-extrabold ${valColorClass}">${valDisplay}</span></div>`;
+            rows.forEach((row, idx) => {
+                const keys = Object.keys(row);
+                
+                // Helper to search keys flexibly
+                const getVal = (patterns, defaultIdx) => {
+                    for (const pattern of patterns) {
+                        const foundKey = keys.find(k => k.toLowerCase().includes(pattern));
+                        if (foundKey && row[foundKey]) return String(row[foundKey]).trim();
                     }
-                },
-                grid: {
-                    top: '8%',
-                    left: '3%',
-                    right: '4%',
-                    bottom: '12%',
-                    containLabel: true
-                },
-                xAxis: {
-                    type: 'category',
-                    data: xAxisLabels,
-                    axisLine: { lineStyle: { color: '#cbd5e1' } },
-                    axisLabel: { color: '#64748b', fontSize: 11, fontWeight: 600, rotate: 30 }
-                },
-                yAxis: {
-                    type: 'value',
-                    splitLine: { lineStyle: { color: '#f1f5f9' } },
-                    axisLabel: { 
-                        color: '#64748b', 
-                        fontSize: 11,
-                        formatter: function(val) {
-                            if (isJualan) {
-                                if (val >= 1000000) return 'RM ' + (val / 1000000).toFixed(1) + 'M';
-                                if (val >= 1000) return 'RM ' + (val / 1000).toFixed(0) + 'k';
-                                return 'RM ' + val;
-                            }
-                            return val;
-                        }
+                    if (defaultIdx !== undefined && keys[defaultIdx] && row[keys[defaultIdx]]) {
+                        return String(row[keys[defaultIdx]]).trim();
                     }
-                },
-                series: [{
-                    name: isJualan ? 'Jumlah Jualan' : 'Jumlah Siri',
-                    type: 'bar',
-                    barWidth: '45%',
-                    data: seriesValues,
-                    itemStyle: {
-                        color: barColorGradient,
-                        borderRadius: [6, 6, 0, 0]
-                    },
-                    emphasis: {
-                        itemStyle: {
-                            color: barHoverGradient
-                        }
-                    }
-                }]
-            };
-
-            trendChartInstance.setOption(option);
-        }
-
-        function updateTrendHeader() {
-            let titleEl = document.getElementById('trendChartTitle');
-            let subEl = document.getElementById('trendChartSub');
-            let metricText = currentTrendMetric === 'program' ? 'Bilangan Program' : 'Jumlah Jualan (RM)';
-            let timeframeText = currentTrendView === 'bulan' ? 'Bulan' : 'Minggu';
-
-            titleEl.innerText = `Trend ${metricText} Mengikut ${timeframeText}`;
-            if (currentTrendMetric === 'program') {
-                subEl.innerText = `Bilangan siri PJRMA yang dilaksanakan mengikut urutan ${timeframeText.toLowerCase()}`;
-            } else {
-                subEl.innerText = `Jumlah nilai jualan (RM) PJRMA mengikut urutan ${timeframeText.toLowerCase()}`;
-            }
-
-            // Button Styles for Metric
-            let btnProg = document.getElementById('btnTrendProgram');
-            let btnJualan = document.getElementById('btnTrendJualan');
-            if (currentTrendMetric === 'program') {
-                btnProg.className = "px-2.5 py-1.5 rounded-lg transition bg-white text-blue-600 shadow-sm font-bold";
-                btnJualan.className = "px-2.5 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800 font-medium";
-            } else {
-                btnJualan.className = "px-2.5 py-1.5 rounded-lg transition bg-white text-emerald-600 shadow-sm font-bold";
-                btnProg.className = "px-2.5 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800 font-medium";
-            }
-
-            // Button Styles for Timeframe
-            let btnBulan = document.getElementById('btnTrendBulan');
-            let btnMinggu = document.getElementById('btnTrendMinggu');
-            if (currentTrendView === 'bulan') {
-                btnBulan.className = "px-2.5 py-1.5 rounded-lg transition bg-white text-blue-600 shadow-sm font-bold";
-                btnMinggu.className = "px-2.5 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800 font-medium";
-            } else {
-                btnMinggu.className = "px-2.5 py-1.5 rounded-lg transition bg-white text-blue-600 shadow-sm font-bold";
-                btnBulan.className = "px-2.5 py-1.5 rounded-lg transition text-slate-500 hover:text-slate-800 font-medium";
-            }
-        }
-
-        function setTrendMetric(metric) {
-            if (currentTrendMetric === metric) return;
-            currentTrendMetric = metric;
-            updateTrendHeader();
-            renderTrendChart();
-        }
-
-        function setTrendView(view) {
-            if (currentTrendView === view) return;
-            currentTrendView = view;
-            updateTrendHeader();
-            renderTrendChart();
-        }
-
-        function renderParlimenChart() {
-            let container = document.getElementById('parlimenChart');
-            parlimenChartInstance = echarts.init(container);
-
-            let regionParlimenSet = {};
-            Object.keys(PARLIMEN_TOTAL_BY_STATE).forEach(reg => {
-                regionParlimenSet[reg] = new Set();
-            });
-
-            Object.keys(stateStats).forEach(st => {
-                let stats = stateStats[st];
-                let targetReg = st;
-                if (regionParlimenSet[targetReg]) {
-                    stats.parlimen.forEach(p => regionParlimenSet[targetReg].add(p));
-                }
-            });
-
-            // Prepare list in order (Perlis to Sarawak for bottom-to-top rendering on horizontal bar)
-            let regionList = Object.keys(PARLIMEN_TOTAL_BY_STATE).reverse();
-
-            let doneSeriesData = [];
-            let remainingSeriesData = [];
-
-            regionList.forEach(reg => {
-                let total = PARLIMEN_TOTAL_BY_STATE[reg];
-                let done = regionParlimenSet[reg] ? regionParlimenSet[reg].size : 0;
-                let pctDone = Math.round((done / total) * 100);
-                let pctRemaining = 100 - pctDone;
-
-                let dataObj = {
-                    value: pctDone,
-                    doneCount: done,
-                    totalCount: total,
-                    pctVal: pctDone,
-                    regionName: reg
+                    return '';
                 };
 
-                doneSeriesData.push(dataObj);
-                remainingSeriesData.push({
-                    value: pctRemaining,
-                    doneCount: done,
-                    totalCount: total,
-                    pctVal: pctDone,
-                    regionName: reg
-                });
-            });
+                const tarikhRaw = getVal(['tarikh', 'date'], 0);
+                const rawNegeri = getVal(['negeri', 'state'], 1);
+                const negeriMatched = normalizeNegeri(rawNegeri);
+                const parlimen = getVal(['parlimen', 'kawasan'], 2);
+                const koperasi = getVal(['koperasi', 'penganjur', 'organisasi'], 4) || getVal([], 4) || 'Program Jualan Rahmah';
+                const location = getVal(['lokasi', 'tempat', 'alamat', 'venue'], 3) || 'Lokasi tidak dinyatakan';
+                const link = getVal(['pautan', 'link', 'url'], 5);
 
-            let option = {
-                tooltip: {
-                    trigger: 'axis',
-                    axisPointer: { type: 'shadow' },
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    textStyle: { color: '#ffffff', fontFamily: 'Inter' },
-                    borderWidth: 0,
-                    borderRadius: 8,
-                    padding: [10, 14],
-                    formatter: function(params) {
-                        let dataObj = params[0].data;
-                        let regName = dataObj.regionName;
-                        let done = dataObj.doneCount;
-                        let total = dataObj.totalCount;
-                        let pct = dataObj.pctVal;
-                        return `
-                            <div class="font-bold text-sm mb-1 text-slate-100">${regName}</div>
-                            <div class="text-xs font-semibold text-indigo-300">${done}/${total} (${pct}%)</div>
-                        `;
-                    }
-                },
-                legend: {
-                    top: '0%',
-                    right: '0%',
-                    textStyle: { color: '#64748b', fontSize: 11, fontWeight: 500 },
-                    data: ['Telah Dilaksanakan', 'Belum Dilaksanakan']
-                },
-                grid: {
-                    top: '10%',
-                    left: '3%',
-                    right: '6%',
-                    bottom: '3%',
-                    containLabel: true
-                },
-                xAxis: {
-                    type: 'value',
-                    min: 0,
-                    max: 100,
-                    axisLabel: {
-                        formatter: '{value}%',
-                        color: '#64748b',
-                        fontSize: 10
-                    },
-                    splitLine: { lineStyle: { color: '#f1f5f9' } }
-                },
-                yAxis: {
-                    type: 'category',
-                    data: regionList,
-                    axisLine: { lineStyle: { color: '#cbd5e1' } },
-                    axisLabel: { color: '#334155', fontSize: 11, fontWeight: 600 }
-                },
-                series: [
-                    {
-                        name: 'Telah Dilaksanakan',
-                        type: 'bar',
-                        stack: 'total',
-                        barWidth: '55%',
-                        itemStyle: { 
-                            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                                { offset: 0, color: '#3b82f6' }, // Soft Royal Blue
-                                { offset: 1, color: '#4f46e5' }  // Soft Indigo
-                            ]),
-                            borderRadius: [0, 0, 0, 0]
-                        },
-                        data: doneSeriesData
-                    },
-                    {
-                        name: 'Belum Dilaksanakan',
-                        type: 'bar',
-                        stack: 'total',
-                        barWidth: '55%',
-                        itemStyle: { 
-                            color: '#e2e8f0', // Soft Pastel Slate
-                            borderColor: '#cbd5e1',
-                            borderWidth: 0.5,
-                            borderRadius: [0, 4, 4, 0] 
-                        },
-                        data: remainingSeriesData
-                    }
-                ]
-            };
+                if (!tarikhRaw && !location) return;
 
-            parlimenChartInstance.setOption(option);
-        }
-
-        function loadMapAndRender() {
-            fetch(GEOJSON_URL)
-                .then(res => res.json())
-                .then(geoJson => {
-                    echarts.registerMap('Malaysia', geoJson);
-                    renderMapChart();
-                })
-                .catch(err => {
-                    console.error("GeoJSON error:", err);
-                    showError("Gagal memuatkan Peta Malaysia. Sila semak sambungan internet anda.");
-                });
-        }
-
-        function renderMapChart() {
-            let container = document.getElementById('mapChart');
-            mapChartInstance = echarts.init(container);
-
-            // GeoJSON State Names Mapping
-            const geoNameMap = {
-                'Johor': 'Johor',
-                'Kedah': 'Kedah',
-                'Kelantan': 'Kelantan',
-                'Melaka': 'Melaka',
-                'Negeri Sembilan': 'Negeri Sembilan',
-                'Pahang': 'Pahang',
-                'Perak': 'Perak',
-                'Perlis': 'Perlis',
-                'Pulau Pinang': 'Pulau Pinang',
-                'Sabah': 'Sabah',
-                'Sarawak': 'Sarawak',
-                'Selangor': 'Selangor',
-                'Terengganu': 'Terengganu',
-                'Kuala Lumpur': 'Wilayah Persekutuan',
-                'W.P. Kuala Lumpur': 'Wilayah Persekutuan',
-                'Labuan': 'Wilayah Persekutuan',
-                'W.P. Labuan': 'Wilayah Persekutuan',
-                'Putrajaya': 'Wilayah Persekutuan',
-                'W.P. Putrajaya': 'Wilayah Persekutuan'
-            };
-
-            let mapData = [];
-            let maxCount = 1;
-
-            Object.keys(stateStats).forEach(s => {
-                let cnt = stateStats[s].siri;
-                if (cnt > maxCount) maxCount = cnt;
-                mapData.push({
-                    name: s,
-                    value: cnt,
-                    parlimenCount: stateStats[s].parlimen.size,
-                    dunCount: stateStats[s].dun.size
-                });
-            });
-
-            let option = {
-                tooltip: {
-                    trigger: 'item',
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    padding: [12, 16],
-                    borderRadius: 12,
-                    borderWidth: 0,
-                    textStyle: { color: '#ffffff', fontFamily: 'Inter' },
-                    formatter: function(params) {
-                        let name = params.name || 'Negeri';
-                        let stats = stateStats[name] || { siri: 0, parlimen: new Set(), dun: new Set() };
-                        let parlimenCnt = stats.parlimen ? stats.parlimen.size : 0;
-                        let dunCnt = stats.dun ? stats.dun.size : 0;
-                        let totalProg = stats.siri || 0;
-
-                        return `
-                            <div class="font-black text-base border-b border-slate-700 pb-1.5 mb-2 text-blue-400">${name}</div>
-                            <div class="space-y-1 text-xs font-medium">
-                                <div>Parlimen: <span class="font-bold text-white">${parlimenCnt} Parlimen</span></div>
-                                <div>DUN: <span class="font-bold text-white">${dunCnt} DUN</span></div>
-                                <div>Bilangan Keseluruhan Program: <span class="font-extrabold text-emerald-400">${totalProg}</span></div>
-                            </div>
-                        `;
-                    }
-                },
-                visualMap: {
-                    min: 0,
-                    max: maxCount,
-                    left: 'left',
-                    bottom: 'bottom',
-                    text: ['Tinggi', 'Rendah'],
-                    seriesIndex: [0],
-                    inRange: {
-                        color: ['#e0f2fe', '#38bdf8', '#0284c7', '#1e3a8a']
-                    },
-                    textStyle: { color: '#64748b', fontSize: 11, fontWeight: 600 },
-                    orient: 'horizontal'
-                },
-                series: [{
-                    name: 'Bilangan Program',
-                    type: 'map',
-                    map: 'Malaysia',
-                    roam: false,
-                    nameMap: geoNameMap,
-                    label: {
-                        show: false
-                    },
-                    itemStyle: {
-                        areaColor: '#f1f5f9',
-                        borderColor: '#94a3b8',
-                        borderWidth: 0.8
-                    },
-                    emphasis: {
-                        label: { show: true, color: '#0f172a', fontWeight: 'bold' },
-                        itemStyle: {
-                            areaColor: '#fde047',
-                            borderColor: '#d97706',
-                            borderWidth: 1.5,
-                            shadowBlur: 10,
-                            shadowColor: 'rgba(0, 0, 0, 0.2)'
-                        }
-                    },
-                    data: mapData
-                }]
-            };
-
-            mapChartInstance.setOption(option);
-
-            // Handle Click Event for Modal Popup
-            mapChartInstance.on('click', function(params) {
-                if (params.name) {
-                    openModal(params.name);
+                if (negeriMatched) {
+                    negeriSet.add(negeriMatched);
                 }
+
+                const parsedDates = parseDateRange(tarikhRaw);
+
+                eventsData.push({
+                    id: idx + 1,
+                    tarikhRaw: tarikhRaw,
+                    parsedDates: parsedDates,
+                    negeri: negeriMatched, // Only set if valid state
+                    parlimen: parlimen,
+                    koperasi: koperasi,
+                    location: location,
+                    link: link
+                });
+            });
+
+            // Populate state dropdown using strictly valid states present in data
+            populateNegeriDropdown(Array.from(negeriSet));
+
+            // Auto switch calendar view to the month of the first dataset event
+            if (eventsData.length > 0) {
+                const validEventWithDate = eventsData.find(e => e.parsedDates && e.parsedDates.length > 0);
+                if (validEventWithDate) {
+                    currentDate = new Date(validEventWithDate.parsedDates[0]);
+                }
+            }
+
+            applyFilters();
+            updateLastUpdatedTimestamp();
+        }
+
+        function updateLastUpdatedTimestamp() {
+            const now = new Date();
+            const options = { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            };
+            const formattedDate = now.toLocaleDateString('ms-MY', options);
+            
+            const elDesktop = document.getElementById('lastUpdatedDate');
+            const elMobile = document.getElementById('lastUpdatedDateMobile');
+            if (elDesktop) elDesktop.textContent = formattedDate;
+            if (elMobile) elMobile.textContent = formattedDate;
+        }
+
+        function parseDateRange(dateStr) {
+            if (!dateStr) return [];
+            const parts = dateStr.split('-').map(s => s.trim());
+            
+            function parseSingleDate(dStr) {
+                if (!dStr) return null;
+                const match = dStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                if (match) {
+                    return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+                }
+                const d = new Date(dStr);
+                return isNaN(d.getTime()) ? null : d;
+            }
+
+            const start = parseSingleDate(parts[0]);
+            if (!start) return [];
+
+            let end = parts[1] ? parseSingleDate(parts[1]) : start;
+            if (!end || end < start) end = start;
+
+            const dates = [];
+            let cur = new Date(start);
+            let count = 0;
+            while (cur <= end && count < 31) {
+                dates.push(new Date(cur));
+                cur.setDate(cur.getDate() + 1);
+                count++;
+            }
+            return dates;
+        }
+
+        function populateNegeriDropdown(foundNegeriSet) {
+            const select = document.getElementById('negeriFilter');
+            select.innerHTML = '<option value="all">Semua Negeri</option>';
+            
+            // Filter and sort according to the official order
+            const sortedStates = VALID_NEGERI_LIST.filter(state => foundNegeriSet.includes(state));
+
+            sortedStates.forEach(neg => {
+                const opt = document.createElement('option');
+                opt.value = neg;
+                opt.textContent = neg;
+                select.appendChild(opt);
             });
         }
 
-        function openModal(stateName) {
-            let stats = stateStats[stateName] || {
-                siri: 0,
-                parlimen: new Set(),
-                dun: new Set(),
-                jualan: 0,
-                subsidi: 0
+        function applyFilters() {
+            filteredEvents = eventsData.filter(ev => {
+                const matchNegeri = (selectedNegeri === 'all') || (ev.negeri && ev.negeri.toLowerCase() === selectedNegeri.toLowerCase());
+                return matchNegeri;
+            });
+
+            renderCurrentView();
+        }
+
+        function switchView(view) {
+            currentView = view;
+            const calendarBtn = document.getElementById('viewCalendarBtn');
+            const listBtn = document.getElementById('viewListBtn');
+            const calendarView = document.getElementById('calendarView');
+            const listView = document.getElementById('listView');
+
+            if (view === 'calendar') {
+                calendarBtn.classList.add('active-tab');
+                calendarBtn.classList.remove('text-slate-600');
+                listBtn.classList.remove('active-tab');
+                listBtn.classList.add('text-slate-600');
+
+                calendarView.classList.remove('hidden');
+                listView.classList.add('hidden');
+            } else {
+                listBtn.classList.add('active-tab');
+                listBtn.classList.remove('text-slate-600');
+                calendarBtn.classList.remove('active-tab');
+                calendarBtn.classList.add('text-slate-600');
+
+                listView.classList.remove('hidden');
+                calendarView.classList.add('hidden');
+            }
+
+            renderCurrentView();
+        }
+
+        function renderCurrentView() {
+            if (currentView === 'calendar') {
+                renderCalendar();
+            } else {
+                renderList();
+            }
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const monthNames = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
+            document.getElementById('calendarMonthTitle').textContent = `${monthNames[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1);
+            let startDayIdx = (firstDay.getDay() + 6) % 7;
+
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const prevMonthDays = new Date(year, month, 0).getDate();
+
+            const today = new Date();
+
+            // Previous month inactive days
+            for (let i = startDayIdx - 1; i >= 0; i--) {
+                const dayNum = prevMonthDays - i;
+                grid.appendChild(createCalendarCell(dayNum, true, []));
+            }
+
+            // Current month days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayEvents = filteredEvents.filter(ev => {
+                    return ev.parsedDates && ev.parsedDates.some(d => 
+                        d.getFullYear() === year && d.getMonth() === month && d.getDate() === day
+                    );
+                });
+
+                const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+                grid.appendChild(createCalendarCell(day, false, dayEvents, isToday));
+            }
+
+            // Next month inactive padding days
+            const totalCells = startDayIdx + daysInMonth;
+            const remainingCells = (7 - (totalCells % 7)) % 7;
+            for (let i = 1; i <= remainingCells; i++) {
+                grid.appendChild(createCalendarCell(i, true, []));
+            }
+        }
+
+        function createCalendarCell(dayNumber, isInactive = false, dayEvents = [], isToday = false) {
+            const cell = document.createElement('div');
+            cell.className = `min-h-[62px] sm:min-h-[75px] md:min-h-[82px] p-1 sm:p-1.5 border-b border-r border-slate-100 flex flex-col justify-between transition-colors ${
+                isInactive ? 'bg-slate-50/50 text-slate-300' : 'bg-white hover:bg-slate-50/80'
+            }`;
+
+            const header = document.createElement('div');
+            header.className = 'flex items-center justify-between mb-0.5';
+
+            const daySpan = document.createElement('span');
+            daySpan.className = `text-[11px] font-extrabold w-5 h-5 flex items-center justify-center rounded-full ${
+                isToday ? 'bg-brand-600 text-white shadow-sm' : isInactive ? 'text-slate-300' : 'text-slate-700'
+            }`;
+            daySpan.textContent = dayNumber;
+            header.appendChild(daySpan);
+
+            if (dayEvents.length > 0) {
+                const badge = document.createElement('span');
+                badge.className = 'text-[9px] font-bold px-1 py-0 rounded-full bg-brand-50 text-brand-700 border border-brand-200';
+                badge.textContent = `${dayEvents.length}`;
+                header.appendChild(badge);
+            }
+
+            cell.appendChild(header);
+
+            const eventList = document.createElement('div');
+            eventList.className = 'space-y-0.5 overflow-y-auto max-h-[48px] sm:max-h-[58px] custom-scrollbar';
+
+            dayEvents.forEach(ev => {
+                const pill = document.createElement('div');
+                pill.className = 'group text-[9px] sm:text-[10px] font-semibold bg-indigo-50 hover:bg-brand-600 hover:text-white text-brand-900 border border-indigo-100/80 rounded p-0.5 sm:p-1 cursor-pointer transition-all shadow-2xs flex flex-col gap-0.5 leading-tight';
+                
+                const negeriLabel = ev.negeri ? ev.negeri : '-';
+                
+                pill.innerHTML = `
+                    <div class="flex items-center gap-1">
+                        <span class="shrink-0 px-1 py-0.2 rounded bg-brand-200 group-hover:bg-brand-500 group-hover:text-white text-brand-800 text-[8px] font-bold uppercase tracking-wider">${negeriLabel}</span>
+                    </div>
+                    <div class="text-[8px] sm:text-[9px] text-slate-600 group-hover:text-indigo-100 truncate flex items-center gap-0.5 mt-0.5">
+                        <i class="fa-solid fa-location-dot text-[7px] text-brand-500 group-hover:text-white shrink-0"></i>
+                        <span class="truncate">${ev.location}</span>
+                    </div>
+                `;
+
+                pill.addEventListener('mouseenter', (e) => showTooltip(e, ev));
+                pill.addEventListener('mousemove', (e) => positionTooltip(e));
+                pill.addEventListener('mouseleave', () => hideTooltip());
+
+                pill.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openModal(ev.id);
+                });
+
+                eventList.appendChild(pill);
+            });
+
+            cell.appendChild(eventList);
+            return cell;
+        }
+
+        function renderList() {
+            const container = document.getElementById('listContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (filteredEvents.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-xl p-8 border border-slate-200/80 text-center">
+                        <i class="fa-regular fa-folder-open text-slate-300 text-3xl mb-2"></i>
+                        <p class="text-xs font-bold text-slate-600">Tiada program dijumpai bagi penapis ini.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filteredEvents.forEach(ev => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl p-3 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+                const negeriLabel = ev.negeri ? ev.negeri : 'N/A';
+
+                card.innerHTML = `
+                    <div class="space-y-1.5">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-100 text-brand-800 uppercase tracking-wider">${negeriLabel}</span>
+                        </div>
+                        <h3 class="text-xs sm:text-sm font-extrabold text-slate-900 leading-snug">${ev.koperasi}</h3>
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 font-medium">
+                            <span class="flex items-center gap-1">
+                                <i class="fa-regular fa-calendar text-brand-600"></i>
+                                <span>${ev.tarikhRaw}</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <i class="fa-solid fa-location-dot text-rose-500"></i>
+                                <span class="line-clamp-1">${ev.location}</span>
+                            </span>
+                        </div>
+                    </div>
+                    <button onclick="openModal(${ev.id})" class="shrink-0 px-3 py-1.5 bg-slate-100 hover:bg-brand-600 hover:text-white text-slate-700 font-bold rounded-lg text-xs transition-all text-center">
+                        Butiran
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function showTooltip(e, ev) {
+            const tooltip = document.getElementById('eventTooltip');
+            if (!tooltip) return;
+
+            const negeriLabel = ev.negeri ? ev.negeri : 'N/A';
+
+            tooltip.innerHTML = `
+                <div class="flex items-center justify-between gap-2 border-b border-slate-700 pb-1 mb-1">
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-brand-500/30 text-brand-300 border border-brand-400/30 uppercase tracking-wider">${negeriLabel}</span>
+                </div>
+                <div class="font-extrabold text-white text-xs leading-snug">${ev.koperasi}</div>
+                <div class="text-[11px] text-slate-300 flex items-center gap-1.5 pt-0.5">
+                    <i class="fa-regular fa-calendar text-brand-400"></i>
+                    <span>${ev.tarikhRaw}</span>
+                </div>
+                <div class="text-[11px] text-slate-300 flex items-start gap-1.5 pt-0.5">
+                    <i class="fa-solid fa-location-dot text-rose-400 mt-0.5 shrink-0"></i>
+                    <span class="line-clamp-2">${ev.location}</span>
+                </div>
+            `;
+            tooltip.classList.remove('hidden');
+            positionTooltip(e);
+        }
+
+        function positionTooltip(e) {
+            const tooltip = document.getElementById('eventTooltip');
+            if (!tooltip || tooltip.classList.contains('hidden')) return;
+
+            const padding = 12;
+            let x = e.clientX + padding;
+            let y = e.clientY + padding;
+
+            const rect = tooltip.getBoundingClientRect();
+            if (x + rect.width > window.innerWidth) {
+                x = e.clientX - rect.width - padding;
+            }
+            if (y + rect.height > window.innerHeight) {
+                y = e.clientY - rect.height - padding;
+            }
+
+            tooltip.style.left = `${Math.max(5, x)}px`;
+            tooltip.style.top = `${Math.max(5, y)}px`;
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('eventTooltip');
+            if (tooltip) tooltip.classList.add('hidden');
+        }
+
+        function openModal(eventId) {
+            const ev = eventsData.find(item => item.id === eventId);
+            if (!ev) return;
+
+            currentModalEvent = ev;
+
+            document.getElementById('modalNegeri').textContent = ev.negeri ? ev.negeri : 'N/A';
+            document.getElementById('modalKoperasi').textContent = ev.koperasi;
+            document.getElementById('modalTarikh').textContent = ev.tarikhRaw;
+            document.getElementById('modalLokasi').textContent = ev.location;
+
+            // Google Maps Search Link
+            const mapsQuery = encodeURIComponent(`${ev.location}, ${ev.negeri || ''} Malaysia`.trim());
+            const mapsBtn = document.getElementById('modalMapsBtn');
+            if (mapsBtn) {
+                mapsBtn.href = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
+            }
+
+            // Google Calendar Link generator
+            const gCalBtn = document.getElementById('modalGoogleCalBtn');
+            if (gCalBtn && ev.parsedDates && ev.parsedDates.length > 0) {
+                const startDate = ev.parsedDates[0];
+                const endDate = new Date(ev.parsedDates[ev.parsedDates.length - 1]);
+                endDate.setDate(endDate.getDate() + 1);
+
+                const formatGCalDate = (d) => {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}${month}${day}`;
+                };
+
+                const datesParam = `${formatGCalDate(startDate)}/${formatGCalDate(endDate)}`;
+                const titleParam = encodeURIComponent(`Program Jualan Rahmah: ${ev.koperasi}`);
+                const detailsParam = encodeURIComponent(`Program Jualan Rahmah MADANI ANGKASA\nPenganjur/Koperasi: ${ev.koperasi}\nLokasi: ${ev.location}`);
+                const locationParam = encodeURIComponent(ev.location);
+
+                gCalBtn.href = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titleParam}&dates=${datesParam}&details=${detailsParam}&location=${locationParam}`;
+            }
+
+            const pautanContainer = document.getElementById('modalPautanContainer');
+            const pautanLink = document.getElementById('modalPautan');
+            if (ev.link && ev.link.startsWith('http')) {
+                pautanLink.href = ev.link;
+                pautanContainer.classList.remove('hidden');
+            } else {
+                pautanContainer.classList.add('hidden');
+            }
+
+            document.getElementById('eventModal').classList.remove('hidden');
+        }
+
+        function downloadIcsFileCurrent() {
+            if (!currentModalEvent || !currentModalEvent.parsedDates || currentModalEvent.parsedDates.length === 0) {
+                return;
+            }
+            const ev = currentModalEvent;
+            const startDate = ev.parsedDates[0];
+            const endDate = new Date(ev.parsedDates[ev.parsedDates.length - 1]);
+            endDate.setDate(endDate.getDate() + 1);
+
+            const formatIcsDate = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}${month}${day}`;
             };
 
-            document.getElementById('modalStateTitle').innerText = stateName;
+            const dtStart = formatIcsDate(startDate);
+            const dtEnd = formatIcsDate(endDate);
 
-            // Set Flag Background if available
-            let flagUrl = FLAG_URLS[stateName] || '';
-            let bgEl = document.getElementById('modalFlagBg');
-            if (flagUrl) {
-                bgEl.style.backgroundImage = `url('${flagUrl}')`;
-            } else {
-                bgEl.style.backgroundImage = 'none';
-            }
+            const icsContent = 
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Program Jualan Rahmah//MY
+BEGIN:VEVENT
+SUMMARY:Program Jualan Rahmah: ${ev.koperasi}
+DESCRIPTION:Program Jualan Rahmah MADANI ANGKASA\\nPenganjur: ${ev.koperasi}
+LOCATION:${ev.location.replace(/,/g, '\\,')}
+DTSTART;VALUE=DATE:${dtStart}
+DTEND;VALUE=DATE:${dtEnd}
+END:VEVENT
+END:VCALENDAR`;
 
-            // Populate Parlimen List
-            let parlimenArr = Array.from(stats.parlimen).sort();
-            document.getElementById('modalParlimenBadge').innerText = parlimenArr.length;
-            let parlimenContainer = document.getElementById('modalParlimenList');
-            if (parlimenArr.length === 0) {
-                parlimenContainer.innerHTML = `<span class="text-slate-400 italic">Tiada data Parlimen</span>`;
-            } else {
-                parlimenContainer.innerHTML = parlimenArr.map((p, i) => `<div class="py-1 border-b border-slate-100 last:border-0 flex items-center"><span class="h-1.5 w-1.5 rounded-full bg-indigo-500 mr-2"></span>${p}</div>`).join('');
-            }
-
-            // Populate DUN List
-            let dunArr = Array.from(stats.dun).sort();
-            document.getElementById('modalDunBadge').innerText = dunArr.length;
-            let dunContainer = document.getElementById('modalDunList');
-            if (dunArr.length === 0) {
-                dunContainer.innerHTML = `<span class="text-slate-400 italic">Tiada data DUN</span>`;
-            } else {
-                dunContainer.innerHTML = dunArr.map((d, i) => `<div class="py-1 border-b border-slate-100 last:border-0 flex items-center"><span class="h-1.5 w-1.5 rounded-full bg-blue-500 mr-2"></span>${d}</div>`).join('');
-            }
-
-            // Financial Summary
-            document.getElementById('modalJualan').innerText = formatCurrency(stats.jualan);
-            document.getElementById('modalSubsidi').innerText = formatCurrency(stats.subsidi);
-
-            // Display Modal
-            let modal = document.getElementById('stateModal');
-            let content = document.getElementById('stateModalContent');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                content.classList.remove('scale-95');
-                content.classList.add('scale-100');
-            }, 10);
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            const fileName = (ev.koperasi || 'Program_Jualan_Rahmah').replace(/[^a-zA-Z0-9]/g, '_') + '.ics';
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function closeModal() {
-            let modal = document.getElementById('stateModal');
-            let content = document.getElementById('stateModalContent');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
+            document.getElementById('eventModal').classList.add('hidden');
         }
 
-        function showError(msg) {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('error-text').innerText = msg;
-            document.getElementById('error-msg').classList.remove('hidden');
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
         }
 
-        // Window Resize Handler for ECharts Responsiveness
-        window.addEventListener('resize', () => {
-            if (trendChartInstance) trendChartInstance.resize();
-            if (mapChartInstance) mapChartInstance.resize();
-            if (parlimenChartInstance) parlimenChartInstance.resize();
-        });
+        function goToCurrentMonth() {
+            currentDate = new Date();
+            renderCalendar();
+        }
 
-        // Initialize application on page load
-        window.onload = function() {
-            parseAndProcessCSV();
-        };
+        function showLoading(isLoading) {
+            const state = document.getElementById('loadingState');
+            if (state) {
+                if (isLoading) state.classList.remove('hidden');
+                else state.classList.add('hidden');
+            }
+        }
+
+        function showError(isError, msg = '') {
+            const state = document.getElementById('errorState');
+            if (state) {
+                if (isError) {
+                    document.getElementById('errorMessage').textContent = msg;
+                    state.classList.remove('hidden');
+                } else {
+                    state.classList.add('hidden');
+                }
+            }
+        }
     </script>
 </body>
 </html>
